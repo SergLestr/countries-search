@@ -1,0 +1,15 @@
+node_modules/
+
+npm-debug.log*
+.eslintcache
+coverage/
+.vitest/
+
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+
+.env
+.env.local
