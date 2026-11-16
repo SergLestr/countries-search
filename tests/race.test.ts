@@ -16,7 +16,6 @@ describe('Race condition & AbortController', () => {
     const capturedSignals: AbortSignal[] = [];
     const resolvers: Array<(res: Response) => void> = [];
 
-    // Мок fetch, который реагирует на signal.abort() отклонением промиса через AbortError
     vi.spyOn(globalThis, 'fetch').mockImplementation((_input, init) => {
       const signal = init?.signal as AbortSignal;
       capturedSignals.push(signal);
@@ -36,22 +35,18 @@ describe('Race condition & AbortController', () => {
     const states: AppState[] = [];
     const search = createSearch((s) => states.push(s), undefined, 300);
 
-    // 1. Вводим "sp" и ждём окончания debounce -> уходит первый fetch
     search.input('sp');
     vi.advanceTimersByTime(300);
     expect(capturedSignals).toHaveLength(1);
     expect(capturedSignals[0].aborted).toBe(false);
 
-    // 2. Вводим "spain" -> первый запрос должен быть отменён немедленно
     search.input('spain');
     expect(capturedSignals[0].aborted).toBe(true);
 
-    // Ждём debounce для "spain" -> уходит второй fetch
     vi.advanceTimersByTime(300);
     expect(capturedSignals).toHaveLength(2);
     expect(capturedSignals[1].aborted).toBe(false);
 
-    // 3. Второй запрос ("spain") резолвится первым
     resolvers[1](
       new Response(JSON.stringify([{ name: 'Spain', capital: 'Madrid' }]), {
         status: 200,
@@ -59,7 +54,6 @@ describe('Race condition & AbortController', () => {
     );
     await vi.runAllTimersAsync();
 
-    // 4. Попытка зарезолвить первый запрос ("sp") позже не перезаписывает результат
     resolvers[0](
       new Response(JSON.stringify([{ name: 'Singapore', capital: 'Singapore' }]), {
         status: 200,
@@ -74,7 +68,6 @@ describe('Race condition & AbortController', () => {
       expect(finalState.countries[0].name).toBe('Spain');
     }
 
-    // Убеждаемся, что AbortError не попал в ветку показа ошибки пользователю
     expect(states.some((s) => s.status === 'error')).toBe(false);
   });
 
